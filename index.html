@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRIME FACTORIZATION</title>
+<style>
+  :root{
+    --paper:#FFFFFF;
+    --line:#E3E7EC;
+    --soft:#F5F7FA;
+    --ink:#161A1E;
+    --pencil:#5B6570;
+    --blue:#1668C4;
+    --red:#D0574C;
+    --green:#177C5B;
+    --num:Tahoma,Verdana,Geneva,"DejaVu Sans",sans-serif;
+    --ui:Tahoma,Verdana,Geneva,"DejaVu Sans",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);min-height:100vh;font-family:var(--ui);color:var(--ink);-webkit-font-smoothing:antialiased;
+  }
+  .wrap{min-height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
+    padding:16px 32px;border-bottom:1px solid var(--line);background:var(--soft)}
+  h1{font-family:var(--ui);font-weight:700;font-size:26px;line-height:1.1;margin:0;color:var(--ink)}
+  .prog{display:flex;align-items:center;gap:16px}
+  .progtext{font-size:15px;color:var(--pencil);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .progtext b{color:var(--ink);font-weight:700}
+  .sheet{position:relative;flex:1;display:flex;flex-direction:column;padding:24px 32px 18px}
+  .tree-area{flex:1;display:flex;justify-content:center;align-items:center;min-height:0}
+  svg#tree{width:100%;height:auto;max-height:calc(100vh - 350px);min-height:260px;display:block}
+  .branch{stroke:var(--ink);stroke-width:1.6;stroke-linecap:round}
+  .branch.pending{stroke:rgba(22,26,30,.42)}
+  .node-num{font-family:var(--num);fill:var(--ink);font-size:26px}
+  .node-num.root{font-size:32px;font-weight:700}
+  .ink-circle{fill:none;stroke:var(--blue);stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+  .pick{cursor:pointer}
+  .pick .hit{fill:transparent;stroke:transparent;stroke-width:1.2}
+  .pick:hover .hit{fill:rgba(22,26,30,.06)}
+  .pick:hover .node-num{fill:var(--blue)}
+  .pick:focus{outline:none}
+  .pick:focus-visible .hit{fill:rgba(22,104,196,.09);stroke:var(--blue)}
+
+  /* in-tree answer slots */
+  .slotbox{width:100%;height:100%;padding:2px;animation:slotIn .22s ease-out}
+  @keyframes slotIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+  .slot{
+    font-family:var(--num);font-size:24px;line-height:1;color:var(--ink);background:#fff;
+    width:100%;height:100%;text-align:center;padding:0 3px;
+    border:1.7px solid rgba(22,26,30,.34);border-radius:10px;outline:none;
+    transition:border-color .15s, box-shadow .15s;-moz-appearance:textfield;
+  }
+  .slot:hover{border-color:rgba(22,26,30,.55)}
+  .slot:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,104,196,.14)}
+  .slot.wrong{color:var(--red);border-color:var(--red);box-shadow:0 0 0 3px rgba(208,87,76,.13)}
+  .slot::-webkit-outer-spin-button,.slot::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .shake{animation:shake .3s}
+  @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+  .footline{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
+    border-top:1px solid var(--line);margin-top:14px;padding-top:14px;min-height:52px}
+  .msg{margin:0;font-size:16px;color:var(--pencil);line-height:1.5;text-align:center}
+  .msg.error{color:var(--red)}
+  .msg.good{color:var(--green)}
+  .msg.hint{color:var(--ink)}
+  .result{font-family:var(--num);font-size:24px;font-weight:700;color:var(--ink);line-height:1.6;text-align:center;margin:0}
+  .result .p{color:var(--blue)}
+  .result .exp{display:block;font-size:.92em}
+  .missnote{display:block;font-size:13.5px;color:var(--pencil);margin-top:4px}
+  .msg.next{width:100%;font-size:14px;color:var(--pencil)}
+
+  .actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 32px;border-top:1px solid var(--line);background:var(--soft)}
+  button.primary{font-family:var(--ui);font-size:15px;font-weight:700;background:var(--blue);color:#fff;
+    border:0;border-radius:8px;padding:11px 20px;cursor:pointer;transition:transform .1s}
+  button.primary:active{transform:translateY(1px)}
+  button.primary:disabled{opacity:.35;cursor:default;transform:none}
+  button.primary.finish{background:#38A169;color:#fff}
+  button.ghost{font-family:var(--ui);font-size:15px;background:#fff;color:var(--ink);
+    border:1px solid #B9C2CC;border-radius:8px;padding:11px 18px;cursor:pointer;transition:.15s}
+  button.ghost:hover{border-color:var(--ink)}
+
+  /* ---------- part 2: LCM ---------- */
+  .lcmsheet{display:none}
+  body.part2 .sheet.work{display:none}
+  body.part2 .lcmsheet{display:flex}
+  body.oncard .lcmsheet{display:none}
+  #lcm{--c0:#1668C4;--c0-bg:#E3EEFA;--c1:#6D3BB5;--c1-bg:#EFE8FB;--c2:#177C5B;--c2-bg:#E2F2EA;--well:#F3F5F8;--ink-3:#8A939C}
+  #lcm .l-banner{display:flex;gap:14px;align-items:flex-start;margin:0 0 18px}
+  #lcm .l-step{font-weight:700;font-size:14px;color:#fff;background:var(--ink);border-radius:999px;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;flex:none}
+  #lcm .l-banner p{margin:3px 0 0;font-size:17px;color:var(--pencil);line-height:1.5}
+  #lcm .l-banner b{color:var(--ink)}
+  #lcm .l-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+  #lcm .l-card{border:1px solid var(--line);border-radius:12px;padding:18px 22px}
+  #lcm .l-row{display:flex;align-items:center;gap:14px;padding:10px 0}
+  #lcm .l-row+.l-row{border-top:1px dashed var(--line)}
+  #lcm .l-rowlab{font-weight:700;font-size:28px;min-width:96px;color:var(--ink-3);display:flex;align-items:center;gap:10px}
+  #lcm .l-row.active .l-rowlab,#lcm .l-row.filled .l-rowlab{color:var(--ink)}
+  #lcm .l-arrow{color:var(--ink-3);font-size:20px;font-weight:400}
+  #lcm .l-expr{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:52px;border:1.5px solid transparent;border-radius:12px;padding:3px 8px}
+  #lcm .l-expr.grab{cursor:grab;touch-action:none;border-color:#B9C2CC;background:#fff}
+  #lcm .l-expr.grab:hover{border-color:var(--ink);background:var(--well)}
+  #lcm .l-expr.sel{border-color:var(--c0);box-shadow:0 0 0 3px rgba(22,104,196,.15)}
+  #lcm .l-expr.spent{opacity:.3}
+  .l-expr.ghost{position:fixed;z-index:99;pointer-events:none;transform:translate(-50%,-50%) scale(1.05);background:#fff;border:1.5px solid #8A939C;border-radius:12px;
+    display:flex;align-items:center;gap:6px;padding:3px 8px;box-shadow:0 10px 24px rgba(0,0,0,.2);font-family:var(--ui)}
+  #lcm .l-hint{font-size:14px;color:var(--ink-3)}
+  #lcm .l-tick{color:var(--green);font-size:20px;font-weight:700}
+  #lcm .l-chip,.l-expr.ghost .l-chip{font-family:var(--ui);font-weight:700;font-size:22px;min-width:46px;height:46px;padding:0 7px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    background:var(--c0-bg,#E3EEFA);color:var(--c0,#1668C4);user-select:none}
+  #lcm .l-chip[data-c="1"],.l-expr.ghost .l-chip[data-c="1"]{background:var(--c1-bg,#EFE8FB);color:var(--c1,#6D3BB5)}
+  #lcm .l-chip[data-c="2"],.l-expr.ghost .l-chip[data-c="2"]{background:var(--c2-bg,#E2F2EA);color:var(--c2,#177C5B)}
+  #lcm .l-chip.plain{background:#fff;color:var(--ink);border:1.5px solid #D5DBE2}
+  #lcm .l-chip.dim{opacity:.34}
+  #lcm .l-chip.pop{animation:lpop .22s ease-out}
+  @keyframes lpop{from{transform:translateY(-8px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+  #lcm .l-times,.l-expr.ghost .l-times{color:var(--ink-3);font-size:18px}
+  #lcm .l-pad{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+  #lcm .l-padlab{font-size:14px;color:var(--ink-3);margin-right:2px}
+  #lcm .l-prime{font-family:var(--ui);font-weight:700;font-size:21px;width:54px;height:48px;border-radius:9px;border:1.5px solid #B9C2CC;background:#fff;color:var(--ink);cursor:pointer}
+  #lcm .l-prime:hover{border-color:var(--ink);background:var(--well)}
+  #lcm .nudge{animation:shake .3s}
+  #lcm .l-lcmhead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+  #lcm .l-lcmlab{font-weight:700;font-size:22px}
+  #lcm .l-box{min-height:150px;background:var(--well);border:1.5px dashed transparent;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:6px;overflow-x:auto}
+  #lcm .l-box.target{border-color:var(--c0);background:rgba(22,104,196,.07)}
+  #lcm .l-box.l-empty{align-items:center;justify-content:center;color:var(--ink-3);font-size:15px}
+  #lcm .l-colgrp{display:flex;align-items:flex-end;flex-wrap:wrap;gap:6px}
+  #lcm .l-colx{color:var(--ink-3);font-size:18px;padding-bottom:12px}
+  #lcm .l-grid{display:grid;gap:6px 2px;align-items:center;justify-items:center}
+  #lcm .l-gsep{color:var(--ink-3);font-size:18px;min-width:18px;text-align:center}
+  #lcm .l-gcell{min-width:46px;height:46px;display:block}
+  #lcm .l-rule{grid-column:1/-1;justify-self:stretch;border-top:2px solid var(--ink-3);height:0;margin:5px 0}
+  #lcm .l-after{margin-top:16px}
+  #lcm .l-go{font-family:var(--ui);font-size:15px;font-weight:700;background:var(--ink);color:#fff;border:0;border-radius:8px;padding:11px 20px;cursor:pointer}
+  #lcm .l-work{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-weight:700;font-size:26px}
+  #lcm .l-work input{font-family:var(--ui);font-weight:700;font-size:24px;width:120px;height:52px;text-align:center;border:1.7px solid #8A939C;border-radius:9px;color:var(--ink)}
+  #lcm .l-work input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(22,104,196,.14)}
+  #lcm .l-work input.bad{border-color:var(--red);animation:shake .3s}
+  #lcm .l-final{font-weight:700;font-size:30px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  #lcm .l-final .eq{color:var(--green)}
+  #lcm .l-msg{min-height:24px;font-size:16px;margin:18px 0 0;color:var(--pencil);text-align:center}
+  #lcm .l-msg.note{color:#9A6B12}
+  #lcm .l-msg.ok{color:var(--green)}
+  #lcm .hide{display:none}
+    background:var(--c0-bg);color:var(--c0)}
+
+  /* ---------- teacher preview bar ---------- */
+  .pv-bar{background:#FFF8DC;border-bottom:1px solid #EADFB4;padding:12px 32px}
+  .pv-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+  .pv-tag{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.06em;background:#161A1E;color:#fff;border-radius:5px;padding:4px 9px}
+  .pv-note{font-size:13.5px;color:#6B5A1E}
+  .pv-tools{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .pv-btn{font-family:var(--ui);font-size:13.5px;background:#fff;border:1px solid #CDBF8A;border-radius:7px;padding:7px 12px;cursor:pointer;color:var(--ink)}
+  .pv-btn:hover{border-color:var(--ink)}
+  .pv-list{display:flex;flex-wrap:wrap;gap:6px}
+  .pv-q{font-family:var(--ui);font-size:14px;font-weight:700;background:#fff;border:1.5px solid #D5DBE2;border-radius:7px;padding:5px 10px;cursor:pointer;color:var(--ink);display:flex;align-items:center;gap:7px}
+  .pv-q.lcm{border-color:#C9B6EA;color:#5A2FA0}
+  .pv-q .pv-i{font-weight:400;font-size:12px;color:#8A939C}
+  .pv-q.done{background:#E2F2EA}
+  .pv-q.on{outline:2.5px solid var(--blue);outline-offset:1px}
+
+  /* ---------- turning it in ---------- */
+  body.oncard .sheet.work, body.oncard .actions{display:none}
+  .submit{display:none;color:var(--ink);padding:28px 32px 32px}
+  body.oncard .submit{display:block}
+  .sub-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start}
+  .sub-work{border-left:1px solid var(--line);padding-left:48px}
+  .submit h2{font-family:var(--ui);font-weight:700;font-size:26px;margin:0 0 6px}
+  .sub-note{font-size:14px;color:var(--pencil);margin:0 0 20px;line-height:1.6}
+  .name-warning{font-size:13px;line-height:1.65;color:#4A535C;background:#FFF8DC;border-radius:6px;padding:11px 13px;margin-bottom:18px}
+  .name-warning b{color:var(--ink)}
+  .field{margin-bottom:15px}
+  .field label{font-size:13px;color:var(--pencil);display:block;margin-bottom:6px}
+  .field label .step-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-right:8px;
+    border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-weight:600}
+  .field label .big{font-weight:700;color:var(--ink);font-size:14px}
+  .field label em{font-style:normal;font-size:12.5px;color:#8A939C}
+  .field input{font-family:var(--ui);font-size:17px;font-weight:600;color:var(--ink);width:100%;background:#fff;
+    border:1.7px solid rgba(22,26,30,.3);border-radius:8px;padding:10px 12px}
+  .field input:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 3px rgba(22,104,196,.14)}
+  .name-check{border:1px solid rgba(22,26,30,.12);border-radius:8px;padding:11px 13px;margin:4px 0 16px;background:#F3F4F1}
+  .name-check .checkhead{font-size:12.5px;color:var(--pencil);margin-bottom:9px;line-height:1.55}
+  .name-check .row{display:flex;gap:12px;align-items:baseline;margin-bottom:5px}
+  .name-check .row:last-child{margin-bottom:0;padding-top:6px;border-top:1px solid rgba(22,26,30,.12)}
+  .name-check .tag{min-width:82px;font-size:12px;color:#8A939C}
+  .name-check .val{font-size:16px;color:var(--ink);font-weight:600}
+  .name-check .val.empty{color:#C3C8CD}
+  .submit-btn{font-family:var(--ui);font-size:15px;font-weight:700;color:#fff;background:#38A169;border:0;border-radius:8px;padding:12px 26px;cursor:pointer}
+  .submit-btn:hover{background:#2F855A}
+  #formFeedback{font-size:14px;margin-top:14px;font-weight:600}
+  .resend{color:#B7791F}
+  .after-submit{margin-top:20px;padding-top:16px;border-top:1px solid rgba(22,26,30,.1)}
+  .keep-btn{font-family:var(--ui);font-size:14px;background:transparent;color:var(--ink);
+    border:1px solid rgba(22,26,30,.3);border-radius:8px;padding:10px 18px;cursor:pointer}
+  .keep-btn:hover{border-color:var(--ink)}
+  .work-head{font-family:var(--ui);font-weight:700;font-size:20px;margin:4px 0 12px}
+  .recap{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+  .recap > div{border:1px solid rgba(22,26,30,.13);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--pencil)}
+  .recap b{display:block;font-family:var(--num);font-weight:700;font-size:26px;color:var(--ink);line-height:1.25}
+  .log{margin-top:14px;border-top:1px solid rgba(22,26,30,.12)}
+  .logrow{display:flex;gap:12px;align-items:baseline;padding:7px 2px;border-bottom:1px solid rgba(22,26,30,.07);font-size:14px}
+  .logn{color:#9AA2AA;min-width:22px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+  .logq{flex:1;font-family:var(--num);font-size:16px}
+  .logq .p{color:var(--blue)}
+  .logq sup{line-height:0;font-size:.68em}
+  .logh{font-size:12px;color:#9AA2AA;white-space:nowrap}
+  .logh.clean{color:var(--green)}
+
+  @media (max-width:900px){
+    #lcm .l-cols{grid-template-columns:1fr;gap:16px}
+  }
+  @media (max-width:860px){
+    .sub-cols{grid-template-columns:1fr;gap:28px}
+    .sub-work{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:20px}
+  }
+  .msg b{font-weight:700}
+  @media (max-width:560px){
+    header,.actions{padding:12px 14px}
+    h1{font-size:22px}
+    .sheet{padding:16px 10px 12px}
+    .prog{flex-wrap:wrap;gap:8px}
+    .prog{align-items:flex-start}
+    .submit{padding:20px 14px}
+    .result{font-size:22px}
+    #lcm .l-rowlab{font-size:22px;min-width:70px}
+    #lcm .l-chip{min-width:38px;height:38px;font-size:19px}
+    #lcm .l-gcell{min-width:38px;height:38px}
+    #lcm .l-card{padding:14px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1 id="pageTitle">PRIME FACTORIZATION</h1>
+    </div>
+    <div class="prog" aria-label="Progress">
+      <div class="progtext" id="progtext" aria-live="polite"></div>
+    </div>
+  </header>
+
+  <div class="sheet work">
+    <div class="tree-area"><svg id="tree" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="footline" id="footline"></div>
+  </div>
+
+  <div class="sheet lcmsheet" id="lcm">
+    <div class="l-banner">
+      <span class="l-step" id="l-stepno">1</span>
+      <p id="l-instr"></p>
+    </div>
+    <div class="l-cols">
+      <div class="l-card" id="l-rowsCard">
+        <div id="l-rows"></div>
+        <div class="l-pad" id="l-pad"></div>
+      </div>
+      <div class="l-card" id="l-lcmCard">
+        <div class="l-lcmhead"><span class="l-lcmlab">LCM</span><span class="l-hint" id="l-boxhint"></span></div>
+        <div class="l-box l-empty" id="l-box"></div>
+        <div id="l-after" class="l-after"></div>
+      </div>
+    </div>
+    <p class="l-msg" id="l-msg"></p>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="nextBtn" disabled>Next problem</button>
+    <button class="ghost" id="turnInBtn" type="button">Turn in now</button>
+  </div>
+
+  <section class="submit" id="submitCard" aria-labelledby="submitTitle">
+    <div class="sub-cols"><div class="sub-form">
+    <h2 id="submitTitle">All 25 done</h2>
+    <p class="sub-note" id="submitNote">Enter your period and name, then submit your results.</p>
+
+    <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"
+            onload="if(window.onHiddenFrameLoad)onHiddenFrameLoad()"></iframe>
+
+    <form action="https://docs.google.com/forms/d/e/1FAIpQLSe4_Gnrq1zyrttA3lSgrVBtMkaVaoMim31ByzoH-orxmfDB2A/formResponse"
+          method="POST" target="hidden_iframe" id="gform">
+      <div class="name-warning">
+        Read the box labels before you type. Your <b>LAST name</b> goes in the
+        <b>Last name</b> box and your <b>FIRST name</b> goes in the <b>First name</b> box.
+        Swapped names cannot be matched to the roster and count as missing.
+      </div>
+      <div class="field">
+        <label for="studentPeriod"><span class="step-num">1</span><span class="big">Period</span></label>
+        <input type="number" id="studentPeriod" placeholder="e.g. 3" min="1" max="10" required>
+      </div>
+      <div class="field">
+        <label for="lastName"><span class="step-num">2</span><span class="big">LAST name</span>
+          &nbsp;<em>&mdash; your family name, the one the roster is alphabetized by</em></label>
+        <input type="text" id="lastName" placeholder="Rodriguez" autocomplete="family-name" required>
+      </div>
+      <div class="field">
+        <label for="firstName"><span class="step-num">3</span><span class="big">FIRST name</span>
+          &nbsp;<em>&mdash; the name your teacher calls you by</em></label>
+        <input type="text" id="firstName" placeholder="Maria" autocomplete="given-name" required>
+      </div>
+      <div class="name-check" id="nameCheck"></div>
+      <input type="hidden" id="studentName" name="entry.1899284808" value="">
+      <input type="hidden" id="formScore" name="entry.1974610095" value="">
+      <button type="submit" class="submit-btn">Submit Results</button>
+    </form>
+    <div id="formFeedback"></div>
+    <div class="after-submit" id="afterSubmit">
+      <button class="keep-btn" type="button" id="keepBtn">Go back and keep going</button>
+    </div>
+
+    </div><div class="sub-work">
+    <h3 class="work-head">Your work</h3>
+    <div class="recap" id="recap"></div>
+    <div id="workLog"></div>
+    </div></div>
+  </section>
+
+</div>
+
+
+<script>
+"use strict";
+
+/* ---------------- number theory ---------------- */
+function isPrime(n){
+  if(!Number.isInteger(n)||n<2) return false;
+  if(n%2===0) return n===2;
+  if(n%3===0) return n===3;
+  for(let i=5;i*i<=n;i+=6){ if(n%i===0||n%(i+2)===0) return false; }
+  return true;
+}
+function smallestFactor(n){
+  if(n%2===0) return 2;
+  for(let i=3;i*i<=n;i+=2){ if(n%i===0) return i; }
+  return n;
+}
+function omega(n){ let c=0,x=n; for(let p=2;p*p<=x;p++){ while(x%p===0){x/=p;c++;} } if(x>1)c++; return c; }
+function largestPF(n){ let m=1,x=n; for(let p=2;p*p<=x;p++){ while(x%p===0){x/=p;m=p;} } if(x>1)m=x; return m; }
+
+/* ---------------- levels ---------------- */
+const LEVELS = {
+  small:  {label:"Small",  range:"12–100",   lo:12,  hi:100,  minOmega:2, maxOmega:5, maxPF:11},
+  medium: {label:"Medium", range:"100–600",  lo:101, hi:600,  minOmega:3, maxOmega:6, maxPF:19},
+  large:  {label:"Large",  range:"600–4000", lo:601, hi:4000, minOmega:4, maxOmega:7, maxPF:29}
+};
+const POOLS = {};
+for(const k in LEVELS){
+  const L = LEVELS[k], out = [];
+  for(let n=L.lo;n<=L.hi;n++){
+    if(isPrime(n)) continue;
+    const w = omega(n);
+    if(w < L.minOmega || w > L.maxOmega) continue;
+    if(largestPF(n) > L.maxPF) continue;
+    out.push(n);
+  }
+  POOLS[k] = out;
+}
+
+/* ---------------- the 15-problem set ----------------
+   Five easy, five medium, five hard, in that order. No number repeats. */
+const DRILL_NAME = "Prime Factorization + LCM Drill";
+const SET = [
+  {k:"small",  label:"Easy",   per:8},
+  {k:"medium", label:"Medium", per:7}
+];
+const PREVIEW = true;
+const PF_TOTAL = SET.reduce((n,g)=>n+g.per,0);   // 15 factor trees
+const LCM_TOTAL = 10;                              // then 10 LCM problems
+const TOTAL = PF_TOTAL + LCM_TOTAL;
+const POINTS = 25;
+// LCM problems: five pairs first, then five sets of three
+const LCM_PAIRS = [[12,18],[14,21],[16,24],[21,28],[27,18],[8,18],[6,10],[9,12],[10,25],[15,35],[20,24]];
+const LCM_TRIPLES = [[12,18,30],[16,24,36],[18,27,45],[20,28,35],[24,36,40],[14,21,35],[15,25,40],[28,42,63],
+  [24,30,45],[16,40,50],[36,48,54],[21,35,45],[22,33,55],[18,30,42],[20,45,75],[32,48,72],[27,36,60],[44,66,99],
+  [16,28,42],[40,48,72],[15,36,48],[14,49,56],[26,39,52],[12,45,50]];   // LCMs from 140 to 900
+function pick(arr,k){ const a=arr.slice(), out=[]; for(let i=0;i<k;i++) out.push(a.splice(Math.floor(Math.random()*a.length),1)[0]); return out; }
+const LSEQ = pick(LCM_TRIPLES,10);   // every LCM problem uses three numbers
+function inLcm(){ return !!PLAN[idx] && PLAN[idx].type === "lcm"; }
+function curDone(){ return inLcm() ? LCM.done() : (!!tree && solved()); }
+function buildSeq(){
+  const out = [];
+  SET.forEach(g=>{
+    const pool = POOLS[g.k].slice();
+    for(let i=0;i<g.per;i++){
+      const j = Math.floor(Math.random()*pool.length);
+      out.push({n:pool.splice(j,1)[0], k:g.k, label:g.label});
+    }
+  });
+  return out;
+}
+const SEQ = buildSeq();
+// 5 factor trees, 5 LCM, 5 factor trees, 5 LCM, 5 factor trees
+// difficulty is mixed inside every block: deal easy/medium/hard (and pairs/triples) round-robin, then shuffle each block
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function mixBlocks(groups, size){
+  const dealt = [];
+  for(let i=0; dealt.length < groups.reduce((n,g)=>n+g.length,0); i++)
+    groups.forEach(g=>{ if(i < g.length) dealt.push(g[i]); });
+  const blocks = [];
+  for(let i=0;i<dealt.length;i+=size) blocks.push(shuffle(dealt.slice(i,i+size)));
+  return blocks;
+}
+const PF_BLOCKS = mixBlocks([SEQ.slice(0,8), SEQ.slice(8,15)], 5)   // easy and medium only
+  .map(bl=>bl.map(p=>({type:"pf", n:p.n, label:p.label})));
+const LCM_BLOCKS = mixBlocks([LSEQ], 5)
+  .map(bl=>bl.map(nums=>({type:"lcm", nums})));
+const PLAN = [].concat(PF_BLOCKS[0], LCM_BLOCKS[0], PF_BLOCKS[1], LCM_BLOCKS[1], PF_BLOCKS[2]);
+function cleanCount(){ return records.filter(r=>r.clean).length; }
+function saveRecord(r){
+  r.idx = idx;
+  for(let i=records.length-1;i>=0;i--) if(records[i].idx===idx) records.splice(i,1);
+  records.push(r);
+  records.sort((a,b)=>a.idx-b.idx);
+}
+let idx = -1;
+let cur = {hints:0, mistakes:0};
+const records = [];
+let submitted = false;
+let submittedAt = 0;
+
+/* ---------------- state ---------------- */
+let uid = 1;
+let tree = null;
+let selectedId = null;
+let freshIds = new Set();
+let hintStage = {};
+let counted = false;
+let focusNext = false;
+const stats = {trees:0, splits:0, hints:0, clean:0};
+
+const svg = document.getElementById("tree");
+const footline = document.getElementById("footline");
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------------- tree helpers ---------------- */
+const mk = v => ({id:uid++, v, kids:null});
+function walk(n, fn){ fn(n); if(n.kids){ walk(n.kids[0],fn); walk(n.kids[1],fn); } }
+function allNodes(){ const a=[]; walk(tree,n=>a.push(n)); return a; }
+function leaves(){ return allNodes().filter(n=>!n.kids); }
+function openLeaves(){ return leaves().filter(n=>!isPrime(n.v)); }
+function find(id){ return allNodes().find(n=>n.id===id) || null; }
+function solved(){ return openLeaves().length===0; }
+
+/* ---------------- layout ---------------- */
+const GAP = 92, LEVEL_H = 100, PAD_X = 38, PAD_Y = 34, MIN_W = 300;
+const BOX_W = 64, BOX_H = 48;
+
+// display tree: the real tree, plus two empty slots hanging off the selected node
+function buildDisplay(n){
+  const d = {id:n.id, v:n.v, root:(n===tree), ref:n, kids:null};
+  if(n.kids) d.kids = n.kids.map(buildDisplay);
+  else if(n.id === selectedId && !solved())
+    d.kids = [{slot:0, id:"s0", parentV:n.v}, {slot:1, id:"s1", parentV:n.v}];
+  return d;
+}
+function layout(root){
+  const nodes = [];
+  let li = 0, maxD = 0;
+  (function rec(n,d){
+    n.d = d; maxD = Math.max(maxD,d); nodes.push(n);
+    if(n.kids){ rec(n.kids[0],d+1); rec(n.kids[1],d+1); n.u = (n.kids[0].u + n.kids[1].u)/2; }
+    else n.u = li++;
+  })(root,0);
+  const raw = PAD_X*2 + (li-1)*GAP;
+  const w = Math.max(MIN_W, raw);
+  const off = (w - raw)/2;
+  nodes.forEach(n=>{ n.x = off + PAD_X + n.u*GAP; n.y = PAD_Y + n.d*LEVEL_H; });
+  return {nodes, w, h: PAD_Y*2 + maxD*LEVEL_H};
+}
+
+/* ---------------- hand-drawn ink circle ---------------- */
+function rng(seed){ let s = (seed*2654435761)%2147483647; if(s<=0) s+=2147483646; return ()=>{ s=(s*16807)%2147483647; return s/2147483647; }; }
+function inkPath(cx,cy,rx,ry,seed){
+  const r = rng(seed+7), N = 16;
+  const start = r()*Math.PI*2;
+  const sweep = Math.PI*2 + 0.30 + r()*0.35;
+  const tilt = (r()-0.5)*0.25;
+  const pts = [];
+  for(let i=0;i<=N;i++){
+    const t = start + sweep*(i/N);
+    const j = 1 + (r()-0.5)*0.075;
+    const px = Math.cos(t)*rx*j, py = Math.sin(t)*ry*j;
+    pts.push([cx + px*Math.cos(tilt) - py*Math.sin(tilt), cy + px*Math.sin(tilt) + py*Math.cos(tilt)]);
+  }
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for(let i=0;i<pts.length-1;i++){
+    const p0 = pts[i-1]||pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2]||p2;
+    const c1 = [p1[0]+(p2[0]-p0[0])/6, p1[1]+(p2[1]-p0[1])/6];
+    const c2 = [p2[0]-(p3[0]-p1[0])/6, p2[1]-(p3[1]-p1[1])/6];
+    d += `C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+/* ---------------- render ---------------- */
+const SVGNS = "http://www.w3.org/2000/svg";
+function render(focusSlot){
+  clearTimeout(hopTimer);
+  const disp = buildDisplay(tree);
+  const {nodes, w, h} = layout(disp);
+  svg.setAttribute("viewBox",`0 0 ${w} ${h}`);
+  svg.setAttribute("preserveAspectRatio","xMidYMid meet");
+  svg.style.maxWidth = Math.min(w*1.75, 1300) + "px";
+
+  const parts = [];
+  nodes.forEach(p=>{
+    if(!p.kids) return;
+    p.kids.forEach(c=>{
+      const dx=c.x-p.x, dy=c.y-p.y, L=Math.hypot(dx,dy), ox=dx/L, oy=dy/L;
+      const padC = c.slot!==undefined
+        ? Math.min(Math.abs(ox)>1e-6 ? (BOX_W/2+3)/Math.abs(ox) : 1e9,
+                   Math.abs(oy)>1e-6 ? (BOX_H/2+3)/Math.abs(oy) : 1e9)
+        : (isPrime(c.v)?30:24);
+      const x1=p.x+ox*24, y1=p.y+oy*24, x2=c.x-ox*padC, y2=c.y-oy*padC;
+      const cls = "branch" + (c.slot!==undefined ? " pending" : "");
+      const anim = (c.slot===undefined && freshIds.has(c.id)) ? ' data-draw data-dur="220"' : '';
+      parts.push(`<line class="${cls}" x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"${anim}/>`);
+    });
+  });
+
+  nodes.forEach(n=>{
+    if(n.slot !== undefined){
+      const bw = BOX_W, bh = BOX_H;
+      parts.push(`<foreignObject class="slotwrap" data-slot="${n.slot}" x="${(n.x-bw/2).toFixed(1)}" y="${(n.y-bh/2).toFixed(1)}" width="${bw}" height="${bh}"></foreignObject>`);
+      return;
+    }
+    const digits = String(n.v).length;
+    const prime = isPrime(n.v);
+    const leaf = !n.kids;
+    const isNew = freshIds.has(n.id);
+    if(prime){
+      const rx = 21 + (digits-1)*7.5, ry = 23;
+      parts.push(`<path class="ink-circle" d="${inkPath(n.x,n.y,rx,ry,n.id)}"${isNew?' data-draw data-dur="420" data-delay="160"':''}/>`);
+    }
+    const cls = "node-num" + (n.root ? " root" : "") + (isNew ? " pop" : "");
+    const num = `<text class="${cls}" x="${n.x.toFixed(1)}" y="${n.y.toFixed(1)}" text-anchor="middle" dominant-baseline="central">${n.v}</text>`;
+    if(leaf && !prime && n.id !== selectedId){
+      const hw = Math.max(50, digits*20+18);
+      parts.push(
+        `<g class="pick" tabindex="0" role="button" aria-label="Split ${n.v}" data-id="${n.id}">`+
+        `<rect class="hit" x="${(n.x-hw/2).toFixed(1)}" y="${(n.y-24).toFixed(1)}" width="${hw}" height="48" rx="6"/>`+
+        num + `</g>`);
+    } else {
+      parts.push(num);
+    }
+  });
+
+  svg.innerHTML = parts.join("");
+
+  // build the answer inputs as real HTML inside the foreignObjects
+  const node = find(selectedId);
+  svg.querySelectorAll(".slotwrap").forEach(fo=>{
+    const i = +fo.dataset.slot;
+    const box = document.createElement("div");
+    box.className = "slotbox";
+    const inp = document.createElement("input");
+    inp.className = "slot"; inp.id = "slot"+i;
+    inp.setAttribute("inputmode","numeric");
+    inp.setAttribute("maxlength","6");
+    inp.setAttribute("aria-label", (i===0?"First":"Second") + " factor of " + (node?node.v:""));
+    inp.addEventListener("input", onType);
+    inp.addEventListener("keydown", onKey);
+    box.appendChild(inp); fo.appendChild(box);
+  });
+
+  svg.querySelectorAll(".pick").forEach(g=>{
+    const id = +g.dataset.id;
+    g.addEventListener("click", ()=>selectNode(id));
+    g.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); selectNode(id); }});
+  });
+
+  if(!reduce){
+    svg.querySelectorAll("[data-draw]").forEach(el=>{
+      const L = el.getTotalLength();
+      el.style.strokeDasharray = L; el.style.strokeDashoffset = L;
+      el.getBoundingClientRect();
+      el.style.transition = `stroke-dashoffset ${el.dataset.dur||300}ms ease-out ${el.dataset.delay||0}ms`;
+      el.style.strokeDashoffset = "0";
+    });
+    svg.querySelectorAll(".pop").forEach(el=>{
+      el.animate([{opacity:0, transform:"translateY(-9px)"},{opacity:1, transform:"none"}],
+                 {duration:260, easing:"cubic-bezier(.2,.8,.3,1)"});
+    });
+  }
+  freshIds.clear();
+
+  if(solved() && !counted){ counted = true; stats.trees++; recordSolve(); }
+
+  renderFoot();
+  renderTally();
+  const f = document.getElementById("slot"+(focusSlot||0));
+  if(f && (focusNext || matchMedia("(hover:hover)").matches)) f.focus();
+  focusNext = false;
+}
+
+/* ---------------- footer line ---------------- */
+function renderFoot(){
+  if(solved()){ renderDone(); return; }
+  const open = openLeaves().length;
+  footline.innerHTML =
+    `<p class="msg" id="msg" role="status" aria-live="polite">${
+      open>1 ? "Fill in the two branches. Tap any other number to work on that one instead."
+             : "Fill in the two branches." + (idx===0 && stats.splits===0 ? " Get each problem right the first time for it to count." : "")}</p>`;
+}
+function setMsg(text, kind){
+  const m = document.getElementById("msg");
+  if(!m) return;
+  m.className = "msg" + (kind ? " " + kind : "");
+  m.innerHTML = text;
+}
+
+/* ---------------- answering ---------------- */
+function slots(){ return [document.getElementById("slot0"), document.getElementById("slot1")]; }
+
+// every factor of n that could legally go in a box, as strings
+let facCache = {n:null, list:null};
+function factorsOf(n){
+  if(facCache.n !== n){
+    const s = new Set();
+    for(let i=2;i*i<=n;i++) if(n%i===0){ s.add(i); s.add(n/i); }
+    facCache = {n, list:[...s].filter(d=>d>1 && d<n).map(String)};
+  }
+  return facCache.list;
+}
+
+let hopTimer = null;
+let wrongTimer = null;
+const MISS_NOTE = " <span class=\"missnote\">This one won’t count toward your score now, but finish it to keep going.</span>";
+function noteMiss(){ cur.mistakes++; }
+function flagWrong(A,B){
+  const [a,b] = slots(), node = find(selectedId);
+  if(!a || !b || !node) return;
+  const key = A+"x"+B;
+  if(cur.lastWrong !== key){ cur.lastWrong = key; noteMiss(); }
+  const extra = MISS_NOTE;
+  if(A===1 || B===1){
+    const bad = A===1 ? a : b; bad.classList.add("wrong"); shake(bad);
+    return setMsg("1 doesn't break anything apart — both branches need to be 2 or more."+extra,"error");
+  }
+  a.classList.add("wrong"); b.classList.add("wrong"); shake(a); shake(b);
+  setMsg(`<b>${A} × ${B} = ${A*B}</b>, and you need <b>${node.v}</b>.`+extra,"error");
+}
+function onType(e){
+  const el = e.target;
+  el.value = el.value.replace(/[^\d]/g,"");
+  el.classList.remove("wrong");
+  clearTimeout(hopTimer);
+  const [a,b] = slots(), node = find(selectedId);
+  if(!a || !b || !node) return;
+
+  // both boxes filled: the branch grows the moment the pair is right
+  clearTimeout(wrongTimer);
+  if(a.value && b.value){
+    const A = +a.value, B = +b.value;
+    if(A*B === node.v && A>1 && B>1){ commit(A,B); return; }
+    // wrong pair: if the box being typed in could still become right (2 then 24), give it a moment
+    const fixed = (el === a) ? B : A, partner = fixed>1 && node.v % fixed === 0 ? String(node.v/fixed) : "";
+    const stillTyping = partner.length > el.value.length && partner.startsWith(el.value);
+    if(stillTyping) wrongTimer = setTimeout(()=>{
+      if(a.isConnected && a.value===String(A) && b.value===String(B)) flagWrong(A,B);
+    }, 2000);
+    else flagWrong(A,B);
+    return;
+  }
+
+  // one box filled: hop to the empty box as soon as what's typed is a usable factor
+  const other = (el === a) ? b : a;
+  if(other.value || !el.value) return;
+  const v = el.value, facs = factorsOf(node.v);
+  if(!facs.includes(v)) return;                                  // not a factor — stay put
+  const couldGrow = facs.some(f => f.length > v.length && f.startsWith(v));
+  if(!couldGrow) other.focus();                                  // nothing longer works, hop now
+  else hopTimer = setTimeout(()=>{                               // 24 might still be coming after 2
+    if(el.value === v && !other.value && document.activeElement === el) other.focus();
+  }, 900);
+}
+
+function onKey(e){
+  if(e.key !== "Enter") return;
+  e.preventDefault();
+  clearTimeout(hopTimer);
+  const [a,b] = slots();
+  if(!a || !b) return;
+  if(a.value && b.value) return check();
+  const other = (e.target === a) ? b : a;   // Enter always hops to the other box
+  other.focus(); other.select();
+}
+
+function check(){
+  const [a,b] = slots(), node = find(selectedId);
+  if(!a.value || !b.value){ shake(!a.value?a:b); return setMsg("Fill in both branches.","error"); }
+  const A = +a.value, B = +b.value;
+  clearTimeout(wrongTimer);
+  if(A===1 || B===1 || A*B !== node.v) return flagWrong(A,B);
+  commit(A,B);
+}
+
+function commit(A,B){
+  const node = find(selectedId);
+  node.kids = [mk(A), mk(B)];
+  freshIds.add(node.kids[0].id); freshIds.add(node.kids[1].id);
+  clearTimeout(wrongTimer); cur.lastWrong = null;
+  stats.splits++;
+  const nowPrime = node.kids.filter(k=>isPrime(k.v)).map(k=>k.v);
+  const next = openLeaves()[0];
+  selectedId = next ? next.id : null;
+  focusNext = true;
+  render();
+  if(!solved()){
+    if(nowPrime.length===2) setMsg(`<b>${A}</b> and <b>${B}</b> are both prime — circled.`,"good");
+    else if(nowPrime.length===1) setMsg(`<b>${nowPrime[0]}</b> is prime — circled. Now break down <b>${find(selectedId).v}</b>.`,"good");
+    else setMsg(`Good split. Now break down <b>${find(selectedId).v}</b>.`,"good");
+  }
+}
+
+function shake(el){ if(reduce) return; el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+
+function hint(){
+  const node = find(selectedId);
+  if(!node) return;
+  const p = smallestFactor(node.v);
+  const stage = hintStage[node.id] || 0;
+  stats.hints++; cur.hints++; renderTally();
+  if(stage === 0){
+    hintStage[node.id] = 1;
+    let text;
+    if(p === 2) text = `<b>${node.v}</b> is even, so <b>2</b> divides it.`;
+    else if(p === 3){
+      const ds = String(node.v).split("").map(Number), sum = ds.reduce((x,y)=>x+y,0);
+      text = `Add the digits of <b>${node.v}</b>: <b>${ds.join(" + ")} = ${sum}</b>. 3 divides ${sum}, so 3 divides ${node.v}.`;
+    }
+    else if(p === 5) text = `<b>${node.v}</b> ends in ${String(node.v).slice(-1)}, so <b>5</b> divides it.`;
+    else text = `2, 3 and 5 don't go into <b>${node.v}</b>. The smallest prime that does is <b>${p}</b>.`;
+    setMsg(text, "hint");
+  } else {
+    const [a,b] = slots();
+    a.value = p; b.value = ""; b.focus();
+    setMsg(`Start with <b>${p}</b>. What times ${p} makes <b>${node.v}</b>?`, "hint");
+  }
+}
+
+function selectNode(id){
+  const n = find(id);
+  if(!n || n.kids || isPrime(n.v)) return;
+  selectedId = id;
+  focusNext = true;
+  render();
+}
+
+/* ---------------- finished ---------------- */
+function renderDone(){
+  const fs = leaves().map(n=>n.v).sort((a,b)=>a-b);
+  const flat = fs.map(v=>`<span class="p">${v}</span>`).join(" × ");
+  const groups = [];
+  fs.forEach(v=>{ const last = groups[groups.length-1]; if(last && last.p===v) last.k++; else groups.push({p:v,k:1}); });
+  const exp = groups.map(g=>`<span class="p">${g.p}</span>${g.k>1?`<sup>${g.k}</sup>`:""}`).join(" × ");
+  const showExp = groups.some(g=>g.k>1);
+  footline.innerHTML =
+    `<p class="result">${tree.v} = ${flat}${showExp?`<span class="exp">= ${exp}</span>`:""}</p>
+     <p class="msg next">${idx >= TOTAL-1
+        ? "That was the last one. Press Enter or “Turn in my work” to submit."
+        : nextMsg()}</p>`;
+}
+
+/* ---------------- problems ---------------- */
+function start(n){
+  uid = 1; tree = mk(n); selectedId = tree.id;
+  freshIds.clear(); hintStage = {}; stats.splits = 0; counted = false; focusNext = false;
+  cur = {hints:0, mistakes:0};
+  render();
+}
+function factorText(){
+  const fs = leaves().map(n=>n.v).sort((a,b)=>a-b);
+  const groups = [];
+  fs.forEach(v=>{ const last = groups[groups.length-1]; if(last && last.p===v) last.k++; else groups.push({p:v,k:1}); });
+  return {
+    html: groups.map(g=>`<span class="p">${g.p}</span>${g.k>1?`<sup>${g.k}</sup>`:""}`).join(" × "),
+    text: groups.map(g=>g.p+(g.k>1?"^"+g.k:"")).join(" x ")
+  };
+}
+function recordSolve(){
+  const clean = cur.hints===0 && cur.mistakes===0;
+  const f = factorText();
+  saveRecord({n:tree.v, label:PLAN[idx].label, html:f.html, text:f.text, clean, hints:cur.hints, mistakes:cur.mistakes});
+}
+function nextMsg(){
+  const nx = PLAN[idx+1];
+  if(nx && nx.type !== PLAN[idx].type)
+    return nx.type==="lcm" ? "Press Enter or “Next problem” to start the LCM problems."
+                           : "Press Enter or “Next problem” to go back to factor trees.";
+  return "Press Enter or “Next problem” to keep going.";
+}
+function showProblem(i){
+  idx = i;
+  const p = PLAN[i];
+  document.body.classList.toggle("part2", p.type==="lcm");
+  el("pageTitle").textContent = p.type==="lcm" ? "LEAST COMMON MULTIPLE" : "PRIME FACTORIZATION";
+  if(p.type==="lcm"){
+    LCM.start(p.nums);
+    renderProgress();
+  } else {
+    start(p.n);
+    focusNext = true;
+    const f = document.getElementById("slot0"); if(f) f.focus();
+  }
+  try{ window.scrollTo(0,0); }catch(e){}
+  if(window.onShowProblem) onShowProblem();
+}
+function goNext(){
+  if(!curDone()) return;
+  if(idx >= TOTAL-1){ showSubmitCard(); return; }
+  showProblem(idx+1);
+}
+function renderTally(){
+  renderProgress();
+}
+
+/* ---------------- progress across the 15 ---------------- */
+const progText = document.getElementById("progtext");
+const nextBtn = document.getElementById("nextBtn");
+function renderProgress(){
+  if(idx < 0) return;
+  progText.innerHTML = `Problem <b>${idx+1}</b> of ${TOTAL}`;
+  const done = curDone();
+  nextBtn.disabled = !done;
+  const last = idx >= TOTAL-1;
+  nextBtn.textContent = last ? "Turn in my work" : "Next problem";
+  nextBtn.classList.toggle("finish", last && done);
+  document.getElementById("turnInBtn").style.display = (last && done) ? "none" : "";
+  if(window.pvUpdate) pvUpdate();
+}
+nextBtn.addEventListener("click", goNext);
+
+// once a tree is finished, Enter moves on
+document.addEventListener("keydown", e=>{
+  if(e.key !== "Enter") return;
+  if(document.body.classList.contains("oncard")) return;
+  if(e.target.classList && e.target.classList.contains("slot")) return;
+  if(e.target === nextBtn) return;            // the button handles its own click
+  if(e.target.closest && e.target.closest("#lcm") && e.target.tagName==="INPUT") return;
+  if(!curDone()) return;
+  e.preventDefault();
+  goNext();
+});
+
+
+/* ================= PART 2: LCM by prime factorization =================
+   Adapted from the LCM page: factor each number with the prime pad,
+   drag each factorization into the LCM box, collapse, then multiply. */
+const LCM = (function(){
+  const PRIMES = [2,3,5,7,11,13];
+  let S = null, drag = null, sel = null, noClick = false, fresh = [], justCollapsed = false, mistakes = 0;
+  const $ = id => document.getElementById("l-"+id);
+
+  function start(nums){
+    S = {nums:nums.slice(), rows:nums.map(n=>({n, rem:n, f:[], done:false, placed:false, order:0})),
+         stage:"factor", active:0, cols:[], expr:[], collapsed:false, placeCount:0, msg:"", kind:""};
+    sel = null; fresh = []; justCollapsed = false; mistakes = 0; lastBad = null; clearTimeout(multTimer);
+    render();
+  }
+  function say(t,k){ S.msg = t||""; S.kind = k||""; }
+  let multTimer = null, lastBad = null;
+  const L_NOTE = " This one won’t count toward your score now, but finish it to keep going.";
+  function lMiss(){ mistakes++; return L_NOTE; }
+  function multWrong(v){
+    const inp = $("ans"); if(!inp) return;
+    if(lastBad !== S.expr.length){ lastBad = S.expr.length; lMiss(); }
+    const ex = L_NOTE;
+    inp.classList.add("bad"); setTimeout(()=>inp.classList.remove("bad"),320);
+    const m = $("msg"); m.className = "l-msg note"; m.textContent = "Not that product. Try again."+ex;
+  }
+
+  /* step 1: factor */
+  function tapPrime(p){
+    const r = S.rows[S.active];
+    if(r.rem % p !== 0){ const ex = lMiss(); say(p+" does not divide "+r.rem+" evenly. Try another prime."+ex,"note"); render(); nudge('.l-prime[data-p="'+p+'"]'); return; }
+    r.f.push(p); r.rem /= p; say("","");
+    if(r.rem === 1){
+      r.f.sort((a,b)=>a-b); r.done = true;
+      const nx = S.rows.findIndex(x=>!x.done);
+      if(nx === -1){ S.stage = "place"; say("Every number is broken down. Now build the LCM.","ok"); }
+      else S.active = nx;
+    }
+    render();
+  }
+  function nudge(q){ const e = document.querySelector("#lcm "+q); if(!e) return; e.classList.add("nudge"); setTimeout(()=>e.classList.remove("nudge"),320); }
+
+  /* step 2: drop a whole factorization into the box */
+  function dropRow(ri){
+    const r = S.rows[ri];
+    if(r.placed) return;
+    const stacked = [], added = [];
+    fresh = [];
+    r.f.forEach(v=>{
+      const c = S.cols.find(k=>k.value===v && !k.chips.some(ch=>ch.row===ri));
+      if(c){ c.chips.push({row:ri}); stacked.push(v); fresh.push(S.cols.indexOf(c)+":"+ri); }
+      else { S.cols.push({value:v, chips:[{row:ri}]}); added.push(v); fresh.push((S.cols.length-1)+":"+ri); }
+    });
+    r.placed = true; r.order = ++S.placeCount; sel = null;
+    let m = "";
+    if(stacked.length && added.length) m = list(stacked)+" already there, so "+(stacked.length>1?"those line up":"that lines up")+" under the match. "+list(added)+" "+(added.length>1?"are":"is")+" new, so "+(added.length>1?"they open new columns":"it opens a new column")+" on the end.";
+    else if(stacked.length) m = "Every factor of "+r.n+" was already there, so the whole row lines up under what is there.";
+    else m = "Nothing to match yet, so "+r.n+" lays down the first columns.";
+    if(S.rows.every(x=>x.placed)){ S.stage = "collapse"; S.collapsed = false; }
+    say(m,"");
+    render();
+  }
+  function list(a){ const u=[...new Set(a)]; return u.length===1 ? "The "+u[0] : "The "+u.slice(0,-1).join(", ")+" and "+u[u.length-1]; }
+
+  /* step 3: collapse */
+  function collapse(){
+    if(S.stage!=="collapse" || S.collapsed) return;
+    S.expr = S.cols.map(c=>({v:c.value, c:c.chips[0].row}));
+    S.collapsed = true; justCollapsed = true;
+    say("Each column counts once, so the rows squeeze down into a single factor sentence.","ok");
+    render();
+  }
+  function toMultiply(){
+    if(S.stage!=="collapse" || !S.collapsed) return;
+    S.stage = "multiply"; say("",""); render();
+  }
+
+  /* step 4: multiply from the left */
+  function checkMult(val){
+    const want = S.expr[0].v * S.expr[1].v;
+    if(parseInt(val,10) !== want) return false;
+    S.expr.splice(0,2,{v:want, c:null});
+    if(S.expr.length === 1){ S.stage = "done"; say("",""); }
+    render(); return true;
+  }
+
+  const TXT = {
+    factor:   ["1","Break <b>{N}</b> into primes. Tap a prime that divides it, and keep going until nothing is left to divide."],
+    place:    ["2","Drag each factorization into the LCM box (or tap it, then tap the box). Factors that are already there line up in the same column."],
+    collapse: ["3","A column with more than one chip is the same prime repeated. Press <b>Enter</b> to collapse the rows into one sentence."],
+    collapsed:["3","One chip per column, written underneath. Press <b>Enter</b> to multiply."],
+    multiply: ["4","Multiply from the left. Answer each step and the sentence shrinks."],
+    done:     ["✓","Every prime shows up as many times as it does in whichever number needed it most. That is the LCM."]
+  };
+  function chip(v,c,key){
+    const isNew = key && fresh.includes(key);
+    return '<span class="l-chip'+(c===null?' plain':'')+(isNew?' pop':'')+'"'+(c===null?'':' data-c="'+c+'"')+'>'+v+'</span>';
+  }
+  function buildGrid(){
+    const n = S.cols.length;
+    const g = document.createElement("div");
+    g.className = "l-grid";
+    g.style.gridTemplateColumns = "repeat("+n+", auto auto)";
+    let h = "";
+    const placed = S.rows.map((r,i)=>({r,i})).filter(o=>o.r.placed).sort((a,b)=>b.r.order-a.r.order);
+    placed.forEach(o=>{
+      let first = true;
+      for(let ci=0;ci<n;ci++){
+        const has = S.cols[ci].chips.some(ch=>ch.row===o.i);
+        h += '<span class="l-gsep">'+(has&&!first?'×':'')+'</span>';
+        if(has){ h += chip(S.cols[ci].value,o.i,ci+":"+o.i); first = false; }
+        else h += '<span class="l-gcell"></span>';
+      }
+    });
+    if(S.collapsed){
+      h += '<div class="l-rule"></div>';
+      for(let ci=0;ci<n;ci++){
+        h += '<span class="l-gsep">'+(ci?'×':'')+'</span>';
+        h += '<span class="l-chip'+(justCollapsed?' pop':'')+'" data-c="'+S.cols[ci].chips[0].row+'">'+S.cols[ci].value+'</span>';
+      }
+    }
+    g.innerHTML = h;
+    return g;
+  }
+  function render(){
+    const t = TXT[(S.stage==="collapse" && S.collapsed) ? "collapsed" : S.stage];
+    $("stepno").textContent = t[0];
+    $("instr").innerHTML = t[1].replace("{N}", S.stage==="factor" ? S.rows[S.active].n : "");
+
+    const rows = $("rows"); rows.innerHTML = "";
+    S.rows.forEach((r,ri)=>{
+      const d = document.createElement("div");
+      d.className = "l-row"+(S.stage==="factor"&&ri===S.active?" active":"")+(r.f.length?" filled":"");
+      const grab = (S.stage==="place" && !r.placed);
+      let h = '<div class="l-rowlab">'+r.n+' <span class="l-arrow">→</span></div>';
+      h += '<div class="l-expr'+(grab?' grab':'')+(r.placed?' spent':'')+(sel===ri?' sel':'')+'" data-row="'+ri+'"'+(grab?' tabindex="0" role="button" aria-label="drag the factors of '+r.n+'"':'')+'>';
+      if(!r.f.length) h += '<span class="l-hint">'+(S.stage==="factor"&&ri===S.active?"tap a prime below":"")+'</span>';
+      r.f.forEach((f,i)=>{ if(i) h += '<span class="l-times">×</span>'; h += chip(f,ri); });
+      h += '</div>';
+      if((r.done && S.stage==="factor") || r.placed) h += '<span class="l-tick">✓</span>';
+      d.innerHTML = h; rows.appendChild(d);
+    });
+
+    const pad = $("pad");
+    if(S.stage==="factor"){
+      pad.classList.remove("hide");
+      pad.innerHTML = '<span class="l-padlab">primes</span>'+PRIMES.map(p=>'<button type="button" class="l-prime" data-p="'+p+'">'+p+'</button>').join("");
+    } else pad.classList.add("hide");
+
+    $("boxhint").textContent = S.stage==="place" ? "drop a factorization here" : "";
+    const box = $("box"); box.className = "l-box"; box.innerHTML = "";
+    if(S.stage==="factor"){ box.classList.add("l-empty"); box.textContent = "break every number into primes first"; }
+    else if(S.stage==="place" || S.stage==="collapse"){
+      if(!S.cols.length){ box.classList.add("l-empty"); box.textContent = "the LCM gets built here"; }
+      else box.appendChild(buildGrid());
+    } else {
+      const g = document.createElement("div"); g.className = "l-colgrp";
+      let h = "";
+      S.expr.forEach((e,i)=>{
+        if(i) h += '<span class="l-colx">×</span>';
+        const dim = (S.stage==="multiply" && i>1);
+        h += '<span class="l-chip'+(e.c===null?' plain':'')+(dim?' dim':'')+'"'+(e.c===null?'':' data-c="'+e.c+'"')+'>'+e.v+'</span>';
+      });
+      g.innerHTML = h; box.appendChild(g);
+    }
+
+    const after = $("after"); after.innerHTML = "";
+    if(S.stage==="collapse" && !S.collapsed) after.innerHTML = '<button type="button" class="l-go" id="l-coll">Collapse</button>';
+    else if(S.stage==="collapse" && S.collapsed) after.innerHTML = '<button type="button" class="l-go" id="l-tomult">Multiply</button>';
+    else if(S.stage==="multiply")
+      after.innerHTML = '<div class="l-work">'+S.expr[0].v+' <span class="l-times">×</span> '+S.expr[1].v+' <span class="l-times">=</span> <input type="text" inputmode="numeric" id="l-ans" autocomplete="off" aria-label="product"></div>';
+    else if(S.stage==="done")
+      after.innerHTML = '<div class="l-final"><span>LCM('+S.nums.join(", ")+')</span><span class="eq">= '+S.expr[0].v+'</span></div>';
+
+    const m = $("msg"); m.className = "l-msg "+S.kind; m.textContent = S.msg;
+    if(S.stage==="done") { m.className = "l-msg"; m.textContent = idx >= TOTAL-1 ? "That was the last one. Press Enter or “Turn in my work” to submit." : nextMsg(); }
+    fresh = []; justCollapsed = false; wire();
+    const i = $("ans"); if(i) i.focus();
+    if(S.stage==="done" && !S.recorded){ S.recorded = true; recordLcm(); }
+    renderProgress();
+  }
+  function recordLcm(){
+    const fs = S.cols.map(c=>c.value).sort((a,b)=>a-b);
+    const g = []; fs.forEach(v=>{ const l=g[g.length-1]; if(l&&l.p===v) l.k++; else g.push({p:v,k:1}); });
+    const html = g.map(x=>`<span class="p">${x.p}</span>${x.k>1?`<sup>${x.k}</sup>`:""}`).join(" × ");
+    const clean = mistakes===0;
+    saveRecord({n:"LCM("+S.nums.join(", ")+")", label:"LCM", html:`<span class="p">${S.expr[0].v}</span> = ${html}`, text:"", clean, hints:0, mistakes});
+  }
+
+  function wire(){
+    document.querySelectorAll("#lcm .l-prime").forEach(b=>b.onclick=()=>tapPrime(+b.dataset.p));
+    const c = $("coll"); if(c) c.onclick = collapse;
+    const tm = $("tomult"); if(tm) tm.onclick = toMultiply;
+    document.querySelectorAll("#lcm .l-expr.grab").forEach(e=>{
+      e.onpointerdown = startDrag;
+      e.onclick = ()=>{ if(noClick) return; const ri = +e.dataset.row; sel = (sel===ri)?null:ri; say(sel!==null?"Now tap the LCM box to drop it in.":"",""); render(); };
+      e.onkeydown = ev=>{ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); ev.stopPropagation(); dropRow(+e.dataset.row); } };
+    });
+    $("box").onclick = ()=>{ if(noClick) return; if(S.stage==="place" && sel!==null) dropRow(sel); };
+    const inp = $("ans");
+    if(inp){
+      inp.oninput = ()=>{
+        clearTimeout(multTimer);
+        inp.value = inp.value.replace(/[^\d]/g,"");
+        if(!inp.value) return;
+        if(checkMult(inp.value)) return;
+        const want = String(S.expr[0].v*S.expr[1].v), v = inp.value;
+        if(want.startsWith(v)) multTimer = setTimeout(()=>{ if(inp.isConnected && inp.value===v) multWrong(v); }, 2000);
+        else multWrong(v);
+      };
+      inp.onkeydown = e=>{
+        if(e.key!=="Enter") return;
+        e.stopPropagation();
+        clearTimeout(multTimer);
+        if(inp.value && !checkMult(inp.value)) multWrong(inp.value);
+      };
+    }
+  }
+  window.addEventListener("keydown", e=>{
+    if(!S || !inLcm() || document.body.classList.contains("oncard")) return;
+    if(S.stage!=="collapse") return;
+    if(e.key==="Enter"){ e.preventDefault(); e.stopImmediatePropagation(); S.collapsed ? toMultiply() : collapse(); }
+  }, true);
+
+  function startDrag(e){
+    e.preventDefault();
+    const elx = e.currentTarget, r = elx.getBoundingClientRect();
+    const g = elx.cloneNode(true); g.className = "l-expr ghost";
+    g.style.width = r.width+"px"; g.style.left = e.clientX+"px"; g.style.top = e.clientY+"px";
+    document.body.appendChild(g);
+    drag = {row:+elx.dataset.row, g, x:e.clientX, y:e.clientY, moved:false};
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, {once:true});
+  }
+  function onMove(e){
+    if(!drag) return;
+    if(Math.abs(e.clientX-drag.x)>5 || Math.abs(e.clientY-drag.y)>5) drag.moved = true;
+    drag.g.style.left = e.clientX+"px"; drag.g.style.top = e.clientY+"px";
+    const b = $("box"), t = document.elementFromPoint(e.clientX,e.clientY);
+    b.classList.toggle("target", !!(t && b.contains(t)));
+  }
+  function onUp(e){
+    window.removeEventListener("pointermove", onMove);
+    if(!drag) return;
+    const b = $("box"), t = document.elementFromPoint(e.clientX,e.clientY);
+    const on = !!(t && b.contains(t));
+    drag.g.remove(); b.classList.remove("target");
+    const d = drag; drag = null;
+    if(d.moved){ noClick = true; setTimeout(()=>{ noClick = false; },60); }
+    if(d.moved && on) dropRow(d.row);
+    else if(d.moved){ say("Drop it inside the LCM box.",""); render(); }
+  }
+
+  function autoSolve(){
+    if(!S || S.stage==="done") return;
+    S.rows.forEach((r,ri)=>{ S.active = ri; while(r.rem>1){ const p = smallestFactor(r.rem); r.f.push(p); r.rem/=p; } r.f.sort((a,b)=>a-b); r.done = true; });
+    S.stage = "place";
+    S.rows.forEach((r,ri)=>{ if(!r.placed) dropRow(ri); });
+    collapse(); toMultiply();
+    while(S.stage==="multiply") checkMult(String(S.expr[0].v*S.expr[1].v));
+  }
+  return {
+    start, autoSolve,
+    done: ()=> !!S && S.stage==="done",
+    refocus: ()=>{ const i = $("ans"); if(i) i.focus(); }
+  };
+})();
+
+/* ---------------- turning it in (same Google Form as the expo review) ---------------- */
+function el(id){ return document.getElementById(id); }
+function esc(t){ return String(t).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function points(){ return cleanCount(); }   // 1 point per problem done right the first time
+function breakdown(){
+  const groups = SET.concat([{label:"LCM", per:LCM_TOTAL}]);
+  return groups.map(g=>{
+    const r = records.filter(x=>x.label===g.label);
+    return `${g.label} ${r.filter(x=>x.clean).length}/${g.per} points, ${r.length} done`;
+  }).join("; ");
+}
+
+function showSubmitCard(){
+  const n = records.length, complete = n >= TOTAL;
+  document.body.classList.add("oncard");
+  progText.innerHTML = complete ? `All <b>${TOTAL}</b> problems finished` : `<b>${n}</b> of ${TOTAL} finished`;
+  el("submitTitle").textContent = complete ? "All 25 done" : "Your work so far";
+  el("submitNote").textContent = complete
+    ? "Enter your period and name, then submit your results."
+    : "Enter your period and name to submit what you have so far. Nothing is lost by doing this — you can go back afterwards, keep going, and send it again.";
+  el("afterSubmit").style.display = complete ? "none" : "";
+  // turning in early doesn't close the drill: if they get further, the form comes back
+  const more = submitted && n > submittedAt;
+  el("gform").style.display = (!submitted || more) ? "" : "none";
+  const btn = document.querySelector("#gform .submit-btn");
+  if(more){
+    el("formFeedback").innerHTML = '<span class="resend">You have done more since you turned in. Send it again and the newer one counts.</span>';
+    btn.textContent = "Send updated results";
+  }
+  el("recap").innerHTML =
+    `<div>Points<b>${cleanCount()}/${POINTS}</b></div>`+
+    `<div>Finished<b>${records.length}/${TOTAL}</b></div>`;
+  el("workLog").innerHTML = !n ? '<p class="sub-note" style="margin-top:14px">Nothing finished yet.</p>' : '<div class="log">' + records.map((r,i)=>
+    `<div class="logrow"><span class="logn">${r.idx+1}.</span>`+
+    `<span class="logq">${r.n} = ${r.html}</span>`+
+    `<span class="logh${r.clean?" clean":""}">${r.clean?"✓ counts":"no credit ("+r.mistakes+" miss"+(r.mistakes>1?"es":"")+")"}</span></div>`
+  ).join("") + "</div>";
+  el("formScore").value = points();
+  try{ window.scrollTo(0,0); }catch(e){}
+  if(!submitted || more) setTimeout(()=>el("studentPeriod").focus(), 50);
+}
+function keepGoing(){
+  document.body.classList.remove("oncard");
+  renderProgress();
+  if(curDone()) nextBtn.focus();
+  else if(inLcm()) LCM.refocus();
+  else { const f = document.getElementById("slot0"); if(f) f.focus(); }
+}
+el("keepBtn").addEventListener("click", keepGoing);
+el("turnInBtn").addEventListener("click", showSubmitCard);
+
+function showSubmittedMessage(){
+  el("formFeedback").innerHTML = '<span style="color:#38a169;">Successfully submitted. ' +
+    (records.length >= TOTAL ? 'You can close this page.' : 'You can close this page, or go back and keep going.') + '</span>';
+  el("gform").style.display = "none";
+}
+window.onHiddenFrameLoad = function(){ if(submitted) showSubmittedMessage(); };
+
+// the two names, read back before anything is sent
+function nameCheck(){
+  const ln = el("lastName").value.trim(), fn = el("firstName").value.trim();
+  const row = (tag,val)=>`<div class="row"><span class="tag">${tag}</span><span class="val${val?"":" empty"}">${val?esc(val):"\u2014"}</span></div>`;
+  el("nameCheck").innerHTML =
+    '<div class="checkhead">This is what will be sent \u2014 check it is the right way round:</div>' +
+    row("Last name", ln) + row("First name", fn) + row("Roll call", (ln && fn) ? ln + ", " + fn : "");
+}
+el("lastName").addEventListener("input", nameCheck);
+el("firstName").addEventListener("input", nameCheck);
+nameCheck();
+
+el("gform").addEventListener("submit", ()=>{
+  const ln = el("lastName").value.trim(), fn = el("firstName").value.trim();
+  el("studentName").value =
+    "Period " + el("studentPeriod").value.trim() +
+    " \u2014 " + ln +
+    " \u2014 " + fn +
+    " \u2014 " + points() + "/" + POINTS + " points (right the first time)" +
+    " \u2014 " + records.length + "/" + TOTAL + " finished" +
+    " \u2014 " + DRILL_NAME +
+    " (" + breakdown() + ")";
+  el("formScore").value = points();
+  submitted = true;
+  submittedAt = records.length;
+});
+
+/* ---------------- teacher preview (only when PREVIEW is true) ---------------- */
+if(PREVIEW){
+  document.title = "PREVIEW — " + document.title;
+  const bar = document.createElement("div");
+  bar.className = "pv-bar";
+  bar.innerHTML =
+    `<div class="pv-top"><span class="pv-tag">Teacher preview</span>
+       <span class="pv-note">Click any problem to jump to it. Students get a new random set each time, from the same number ranges.</span>
+       <span class="pv-tools">
+         <button type="button" class="pv-btn" id="pvAns">Show answer</button>
+         <button type="button" class="pv-btn" id="pvAll">Show all answers</button>
+         <button type="button" class="pv-btn" id="pvCard">Turn-in screen</button>
+         <button type="button" class="pv-btn" id="pvNew">New random set</button>
+       </span></div>
+     <div class="pv-list">${PLAN.map((p,i)=>
+       `<button type="button" class="pv-q ${p.type}" data-i="${i}"><span class="pv-i">${i+1}</span>${p.type==="lcm" ? "LCM " + p.nums.join(", ") : p.n}</button>`).join("")}</div>`;
+  document.querySelector("header").after(bar);
+  const solveCurrent = ()=>{
+    if(inLcm()) LCM.autoSolve();
+    else { let guard = 0; while(!solved() && guard++ < 40){ const v = find(selectedId).v, f = smallestFactor(v); commit(f, v/f); } }
+  };
+  window.pvUpdate = ()=>{
+    bar.querySelectorAll(".pv-q").forEach(b=>{
+      const i = +b.dataset.i;
+      b.classList.toggle("on", i===idx && !document.body.classList.contains("oncard"));
+      b.classList.toggle("done", records.some(r=>r.idx===i));
+    });
+  };
+  bar.querySelectorAll(".pv-q").forEach(b=>b.addEventListener("click", ()=>{
+    document.body.classList.remove("oncard");
+    showProblem(+b.dataset.i);
+  }));
+  el("pvAns").onclick = ()=>{ if(document.body.classList.contains("oncard")) return; solveCurrent(); };
+  el("pvAll").onclick = ()=>{
+    document.body.classList.remove("oncard");
+    for(let i=0;i<TOTAL;i++){ showProblem(i); solveCurrent(); }
+    showSubmitCard(); pvUpdate();
+  };
+  el("pvCard").onclick = ()=>{ showSubmitCard(); pvUpdate(); };
+  el("pvNew").onclick = ()=>location.reload();
+  // nothing is ever sent from the preview
+  el("gform").addEventListener("submit", e=>{
+    e.preventDefault(); e.stopImmediatePropagation();
+    el("formFeedback").innerHTML = '<span style="color:#9A6B12;">Preview only: nothing was sent to the Google Form.</span>';
+  }, true);
+}
+
+showProblem(0);
+</script>
+</body>
+</html>
